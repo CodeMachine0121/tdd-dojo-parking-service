@@ -1,8 +1,13 @@
+using System.Globalization;
+
 namespace tdd_dojo_parking_service;
 
 [TestFixture]
 public class ParkingServiceTests
 {
+    private DateTime _arriveTime;
+    private decimal _fee;
+    private DateTime _leaveTime;
     private ParkingService _parkingService;
 
     [SetUp]
@@ -14,82 +19,66 @@ public class ParkingServiceTests
     [Test]
     public void should_be_free()
     {
-        var arriveTime = new DateTime(2024, 1, 9, 0, 0, 0, 0, DateTimeKind.Utc);
-        var leaveTime = new DateTime(2024, 1, 9, 0, 15, 0, 0, DateTimeKind.Utc);
-
-        var fee = _parkingService.CalculateFee(arriveTime, leaveTime, false);
-        Assert.AreEqual(0, fee);
+        SetArriveTime("2024-01-09 00:00:00");
+        SetLeaveTime("2024-01-09 00:01:00");
+        WhenCalculate();
+        FeeShouldBe(0);
     }
 
     [Test]
     public void should_be_30()
     {
-        var arriveTime = new DateTime(2024, 1, 9, 0, 0, 0, 0, DateTimeKind.Utc);
-        var leaveTime = new DateTime(2024, 1, 9, 0, 30, 0, 0, DateTimeKind.Utc);
-
-        var fee = _parkingService.CalculateFee(arriveTime, leaveTime, false);
-        Assert.AreEqual(30, fee);
+        SetArriveTime("2024-01-09 00:00:00");
+        SetLeaveTime("2024-01-09 00:30:00");
+        WhenCalculate();
+        FeeShouldBe(30);
     }
 
     [Test]
     public void should_be_60()
     {
-        var arriveTime = new DateTime(2024, 1, 9, 0, 0, 0, 0, DateTimeKind.Utc);
-        var leaveTime = new DateTime(2024, 1, 9, 1, 0, 0, 0, DateTimeKind.Utc);
-
-        var fee = _parkingService.CalculateFee(arriveTime, leaveTime, false);
-        Assert.AreEqual(60, fee);
+        SetArriveTime("2024-01-09 00:00:00");
+        SetLeaveTime("2024-01-09 01:00:00");
+        WhenCalculate();
+        FeeShouldBe(60);
     }
 
     [Test]
     public void should_be_max_150()
     {
-        var arriveTime = new DateTime(2024, 1, 9, 0, 0, 0, 0, DateTimeKind.Utc);
-        var leaveTime = new DateTime(2024, 1, 10, 0, 0, 0, 0, DateTimeKind.Utc);
-
-        var fee = _parkingService.CalculateFee(arriveTime, leaveTime, false);
-        Assert.AreEqual(150, fee);
+        SetArriveTime("2024-01-09 00:00:00");
+        SetLeaveTime("2024-01-10 00:00:00");
+        WhenCalculate();
+        FeeShouldBe(150);
     }
 
-    [Test]
-    public void should_be_50_when_on_holiday()
+    private void FeeShouldBe(int expected)
     {
-        var arriveTime = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-        var leaveTime = new DateTime(2024, 1, 1, 0, 15, 0, 0, DateTimeKind.Utc);
-
-        var fee = _parkingService.CalculateFee(arriveTime, leaveTime, true);
-        Assert.AreEqual(0, fee);
+        Assert.AreEqual(expected, _fee);
     }
 
-    [Test]
-    public void should_be_100_when_on_holiday()
+    private void WhenCalculate()
     {
-        var arriveTime = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-        var leaveTime = new DateTime(2024, 1, 1, 0, 30, 0, 0, DateTimeKind.Utc);
-
-        var fee = _parkingService.CalculateFee(arriveTime, leaveTime, true);
-        Assert.AreEqual(50, fee);
+        _fee = _parkingService.CalculateFee(_arriveTime, _leaveTime);
     }
 
-    [Test]
-    public void should_be_2400_when_on_holiday()
+    private void SetLeaveTime(string dateTime)
     {
-        var arriveTime = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-        var leaveTime = new DateTime(2024, 1, 2, 0, 0, 0, 0, DateTimeKind.Utc);
+        _leaveTime = DateTime.ParseExact(dateTime, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+    }
 
-        var fee = _parkingService.CalculateFee(arriveTime, leaveTime, true);
-        Assert.AreEqual(2400, fee); 
+    private void SetArriveTime(string time)
+    {
+        _arriveTime = DateTime.ParseExact(time, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
     }
 }
 
 public class ParkingService
 {
-    public decimal CalculateFee(DateTime arriveTime, DateTime leaveTime, bool isHoliday)
+    public decimal CalculateFee(DateTime arriveTime, DateTime leaveTime)
     {
-        var spans = new decimal(Math.Floor((leaveTime - arriveTime).TotalMinutes/30));
-
-        return isHoliday
-            ? spans * 50
-            : decimal.Min(spans * 30, 150m);
+        var spans = new decimal(Math.Floor((leaveTime - arriveTime).TotalMinutes / 30));
+        var fee = spans * 30;
+        return fee > 150 ? 150 : fee;
     }
 }
